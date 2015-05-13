@@ -22,7 +22,6 @@ type FindUserByIdCommand struct {
 }
 
 func findUserByIdHandler(app *commandbus.CommandBus, users UserRepository) {
-	//func findUserByIdHandler(app application, users UserRepository) {
 
 	app.RegisterHandler(&FindUserByIdCommand{}, func(cmd interface{}) {
 		command, _ := cmd.(*FindUserByIdCommand)
@@ -38,7 +37,6 @@ func findUserByIdHandler(app *commandbus.CommandBus, users UserRepository) {
 	})
 }
 func registerUserHandler(app *commandbus.CommandBus, users UserRepository) {
-	//func registerUserHandler(app application, users UserRepository) {
 
 	app.RegisterHandler(&RegisterUserCommand{}, func(cmd interface{}) {
 		command, _ := cmd.(*RegisterUserCommand)
