@@ -10,7 +10,7 @@ The primary goal of this is to create a client agnostic application. The client 
 that can take input, create command structs, and pass them to the application to be handled. 
 
 ## Structure
-The meat of the application lives in `/app`. The applicatoin modules live there. There is only one domain module
+The meat of the application lives in `/app`. The application modules live there. There is only one domain module
 so far, `user`. The application is created in `/app/app.go` and is passed to the user module to be connected
 in `/app/user/app.go`. 
 
