@@ -20,3 +20,7 @@ type UserRepository interface {
 	ByUsername(username string) (*User, error)
 	Add(user *User) error
 }
+
+type UserMailer interface {
+	SendRegistrationEmail(user *User) error
+}

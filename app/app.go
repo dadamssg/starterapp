@@ -4,8 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/dadamssg/commandbus"
+	"github.com/dadamssg/starterapp/app/command"
 	"github.com/dadamssg/starterapp/app/user"
 	_ "github.com/lib/pq"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 )
 
 type App struct {
@@ -17,7 +20,8 @@ func (app *App) RegisterHandler(t interface{}, function func(cmd interface{})) {
 }
 
 type Config struct {
-	DbConfig DatabaseConfig
+	DbConfig       DatabaseConfig
+	MandrillApiKey string
 }
 
 type DatabaseConfig struct {
@@ -33,15 +37,39 @@ func New(config Config) *App {
 		CommandBus: commandbus.New(),
 	}
 
-	db := setupDatabase(config.DbConfig)
-	users := user.NewPSQLUserRepository(db)
+	validator := command.NewValidator()
+	app.CommandBus.AddMiddleware(1, command.RegisterMiddleware(validator))
 
-	user.Connect(app.CommandBus, users)
+	db := SetupDatabase(config.DbConfig)
+	users := user.NewPSQLUserRepository(db)
+	mailer := user.NewMandrillMailer(config.MandrillApiKey)
+
+	user.Connect(app.CommandBus, validator, users, mailer)
 
 	return app
 }
 
-func setupDatabase(config DatabaseConfig) *sql.DB {
+func ReadConfig(configPath string) Config {
+	data, err := ioutil.ReadFile(configPath)
+	panicIf(err)
+
+	config := make(map[string]string)
+
+	err = yaml.Unmarshal([]byte(data), &config)
+	panicIf(err)
+
+	return Config{
+		DbConfig: DatabaseConfig{
+			User:     config["database_user"],
+			Password: config["database_password"],
+			Host:     config["database_host"],
+			Database: config["database_name"],
+		},
+		MandrillApiKey: config["mandrill_api_key"],
+	}
+}
+
+func SetupDatabase(config DatabaseConfig) *sql.DB {
 	conn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		config.User,
 		config.Password,

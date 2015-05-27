@@ -36,7 +36,7 @@ func findUserByIdHandler(app *commandbus.CommandBus, users UserRepository) {
 		command.User = user
 	})
 }
-func registerUserHandler(app *commandbus.CommandBus, users UserRepository) {
+func registerUserHandler(app *commandbus.CommandBus, users UserRepository, mailer UserMailer) {
 
 	app.RegisterHandler(&RegisterUserCommand{}, func(cmd interface{}) {
 		command, _ := cmd.(*RegisterUserCommand)
@@ -57,6 +57,8 @@ func registerUserHandler(app *commandbus.CommandBus, users UserRepository) {
 			commandpkg.AddCommandError(command, 500, "Internal server error.")
 			return
 		}
+
+		go mailer.SendRegistrationEmail(user)
 
 		command.User = user
 	})
