@@ -24,3 +24,16 @@ type UserRepository interface {
 type UserMailer interface {
 	SendRegistrationEmail(user *User) error
 }
+
+// authentication
+
+type Token struct {
+	ExpiresAt time.Time
+	Token     string
+	UserId    string
+}
+
+type TokenRepository interface {
+	ByToken(token string) (*Token, error)
+	Add(token *Token) error
+}

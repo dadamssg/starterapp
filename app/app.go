@@ -42,9 +42,11 @@ func New(config Config) *App {
 
 	db := SetupDatabase(config.DbConfig)
 	users := user.NewPSQLUserRepository(db)
+	accessTokens := user.NewPSQLAccessTokenRepository(db)
+	refreshTokens := user.NewPSQLRefreshTokenRepository(db)
 	mailer := user.NewMandrillMailer(config.MandrillApiKey)
 
-	user.Connect(app.CommandBus, validator, users, mailer)
+	user.Connect(app.CommandBus, validator, users, accessTokens, refreshTokens, mailer)
 
 	return app
 }

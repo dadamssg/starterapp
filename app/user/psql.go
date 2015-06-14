@@ -69,3 +69,53 @@ func (r *SqlUserRepository) byKey(key string, value interface{}) (*User, error) 
 func canonicalize(value string) string {
 	return strings.ToLower(value)
 }
+
+type SqlTokenRepository struct {
+	db    *sql.DB
+	table string
+}
+
+func NewPSQLAccessTokenRepository(db *sql.DB) TokenRepository {
+	return &SqlTokenRepository{db: db, table: "access_token"}
+}
+
+func NewPSQLRefreshTokenRepository(db *sql.DB) TokenRepository {
+	return &SqlTokenRepository{db: db, table: "refresh_token"}
+}
+
+func (r *SqlTokenRepository) ByToken(token string) (*Token, error) {
+	return r.byKey("token", token)
+}
+
+func (r *SqlTokenRepository) Add(token *Token) error {
+	stmt, err := r.db.Prepare(fmt.Sprintf("INSERT INTO %s(token, user_id, expires_at) VALUES($1,$2,$3)", r.table))
+	if err != nil {
+		return err
+	}
+
+	_, err = stmt.Exec(
+		token.Token,
+		token.UserId,
+		token.ExpiresAt)
+
+	return err
+}
+
+func (r *SqlTokenRepository) byKey(key string, value interface{}) (*Token, error) {
+	token := &Token{}
+	query := fmt.Sprintf("SELECT token, user_id, expires_at FROM %s WHERE %s = $1", r.table, key)
+	err := r.db.QueryRow(query, value).Scan(
+		&token.Token,
+		&token.UserId,
+		&token.ExpiresAt)
+	switch {
+	case err == sql.ErrNoRows:
+		return nil, nil
+	case err != nil:
+		return nil, err
+	default:
+		token.ExpiresAt = token.ExpiresAt.UTC()
+
+		return token, nil
+	}
+}

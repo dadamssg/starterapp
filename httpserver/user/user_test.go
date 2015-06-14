@@ -1,11 +1,11 @@
 package user
 
 import (
-	"github.com/dadamssg/starterapp/app"
-	//"github.com/dadamssg/starterapp/app/user"
 	"bytes"
 	"database/sql"
 	"fmt"
+	"github.com/dadamssg/starterapp/app"
+	"github.com/dadamssg/starterapp/app/user"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -14,9 +14,12 @@ import (
 
 var db *sql.DB
 
+var app *starterapp.App
+
 func init() {
 	config := starterapp.ReadConfig("/config/starterapp.yml")
 	db = starterapp.SetupDatabase(config.DbConfig)
+	app = starterapp.New(config)
 	//users := user.NewPSQLUserRepository(db)
 }
 
@@ -33,10 +36,7 @@ func TestCanRegisterUser(t *testing.T) {
             "plainPassword": "adadgdsa3"
         }
     }`)
-	req, err := http.NewRequest("POST", "http://localhost:8080/register", bytes.NewBuffer(jsonStr))
-	if err != nil {
-		fail(t, "Couldn't create request.")
-	}
+	req, _ := http.NewRequest("POST", "http://localhost:8080/register", bytes.NewBuffer(jsonStr))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
@@ -51,7 +51,41 @@ func TestCanRegisterUser(t *testing.T) {
 		fail(t, "Couldn't register user!")
 	}
 
-	// fmt.Println("response Status:", resp.Status)
+	body, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println("response Body:", string(body))
+}
+
+func TestGetUserToken(t *testing.T) {
+
+	cmd := &user.RegisterUserCommand{
+		Username:      "johndoe",
+		Email:         "jdoe@example.org",
+		PlainPassword: "s3cr3t123",
+	}
+
+	app.CommandBus.Handle(cmd)
+
+	var jsonStr = []byte(`{
+        "authenticate": {
+            "username": "johndoe",
+            "password": "s3cr3t123"
+        }
+    }`)
+	req, _ := http.NewRequest("POST", "http://localhost:8080/authenticate", bytes.NewBuffer(jsonStr))
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fail(t, "Couldn't make request.")
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 201 {
+		fail(t, "Couldn't authenticate!")
+	}
+
 	body, _ := ioutil.ReadAll(resp.Body)
 	fmt.Println("response Body:", string(body))
 }
@@ -60,51 +94,3 @@ func fail(t *testing.T, msg string) {
 	t.Log(msg)
 	t.Fail()
 }
-
-// func config() starterapp.Config {
-
-// 	config := readConfig()
-
-// 	return starterapp.Config{
-// 		DbConfig: starterapp.DatabaseConfig{
-// 			User:     config["database_user"],
-// 			Password: config["database_password"],
-// 			Host:     config["database_host"],
-// 			Database: config["database_name"],
-// 		},
-// 	}
-// }
-
-// func readConfig() map[string]string {
-
-// 	data, err := ioutil.ReadFile("/config/starterapp.yml")
-// 	panicIf(err)
-
-// 	config := make(map[string]string)
-
-// 	err = yaml.Unmarshal([]byte(data), &config)
-// 	panicIf(err)
-
-// 	return config
-// }
-
-// func setupDatabase(config DatabaseConfig) *sql.DB {
-// 	conn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-// 		config.User,
-// 		config.Password,
-// 		config.Host,
-// 		config.Port,
-// 		config.Database)
-
-// 	db, err := sql.Open("postgres", conn)
-// 	panicIf(err)
-// 	panicIf(db.Ping())
-
-// 	return db
-// }
-
-// func panicIf(err error) {
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// }
